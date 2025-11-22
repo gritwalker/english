@@ -21,20 +21,22 @@
         }
         .text-display {
             white-space: pre-wrap; /* 줄 바꿈 유지 */
-            line-height: 1.8;
+            line-height: 1.5;
             font-size: 1.125rem;
-            min-height: 200px;
+            min-height: 160px;
         }
         /* 빈칸 스타일 */
         .masked-word {
             color: transparent; /* 텍스트 숨기기 */
             background-color: #e0e7ff; /* 빈칸 배경색 */
-            border-radius: 4px;
-            padding: 0 4px;
+            border-radius: 3px;
+            padding: 0 2px;
             margin: 0 2px;
-            font-weight: bold;
+            font-weight: 600;
             display: inline-block;
-            min-width: 1.5rem; /* 빈칸 최소 너비 */
+            line-height: 1.0;
+            vertical-align: baseline;
+            min-width: 1.2rem; /* 빈칸 최소 너비 */
             transition: background-color 0.15s ease;
         }
         .masked-word.show-answer {
@@ -71,6 +73,12 @@
         }
         .status-loading {
             @apply bg-blue-100 text-blue-700;
+        }
+        /* 모바일 최적화 */
+        @media (max-width: 640px) {
+            .container-wrapper { padding: 0.75rem; }
+            .text-display { font-size: 1rem; line-height: 1.45; }
+            .btn { font-size: 0.875rem; padding: 0.5rem 0.75rem; }
         }
     </style>
 </head>
@@ -416,8 +424,11 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             stopSpeaking();
             
             // --- 가독성 개선: 문장마다 줄바꿈 추가 ---
-            text = text.replace(/([.?!])\s+(?=[A-Z][a-z])/g, '$1\n');
+            // 문장 끝의 구두점(.?!), 뒤에 따옴표가 있을 수도 있음. 다음 문장이 시작되면 줄바꿈
+            text = text.replace(/([.?!])(["”’']?)\s+(?=["“A-Z])/g, '$1$2\n');
+            // 마지막 문장도 줄바꿈으로 끝나도록 처리
             text = text.replace(/([.?!])\s*$/g, '$1\n');
+            // 불필요한 다중 공백 줄바꿈 정리
             text = text.replace(/\n\n+/g, '\n\n');
 
             originalText = text;
@@ -613,7 +624,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             // 현재 페이지의 원문 텍스트 추출
             const startChunkIndex = (currentPage - 1) * chunksPerPage;
             const endChunkIndex = Math.min(currentPage * chunksPerPage, chunks.length);
-            const pageText = chunks.slice(startChunkIndex, endChunkIndex).join('. '); 
+            const pageText = chunks.slice(startChunkIndex, endChunkIndex).join(' ');
 
             if (pageText.trim().length === 0) {
                 displayMessage("읽어줄 텍스트가 없습니다.", "warning");
@@ -639,6 +650,13 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             */
             // ----------------------------------------------------------------------------------
 
+            // API 키가 없으면 즉시 브라우저 TTS로 폴백
+            const hasApiKey = typeof API_KEY === 'string' && API_KEY.trim().length > 0;
+            if (!hasApiKey) {
+                webSpeechSpeak(pageText);
+                return;
+            }
+
             // 현재 환경(Canvas)에서는 Gemini TTS API 사용 (Azure 구조를 대체)
             const payload = {
                 contents: [{ parts: [{ text: pageText }] }],
@@ -655,7 +673,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
             const apiUrlWithKey = `${EXTERNAL_TTS_API_ENDPOINT}${API_KEY}`;
             let retries = 0;
-            const maxRetries = 3;
+            const maxRetries = 2;
 
             while (retries < maxRetries) {
                 try {
@@ -675,36 +693,29 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                     const mimeType = part?.inlineData?.mimeType;
 
                     if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
-                        // Gemini TTS는 Base64 인코딩된 PCM을 반환 (WAV 변환 필요)
                         const rateMatch = mimeType.match(/rate=(\d+)/);
                         const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 16000;
-                        
                         const pcmData = base64ToArrayBuffer(audioData);
                         const pcm16 = new Int16Array(pcmData);
                         const wavBlob = pcmToWav(pcm16, sampleRate);
                         const audioUrl = URL.createObjectURL(wavBlob);
-                        
                         playAudio(audioUrl);
-                        return; // 성공적으로 재생 시작
+                        return;
                     } else {
-                        // ★ 주의: Azure TTS를 사용하는 경우, 이 부분의 응답 처리 로직을 
-                        // 반환되는 오디오 형식(MP3, WAV 등)에 맞게 완전히 바꿔야 합니다! 
                         throw new Error("Invalid audio data received or Azure response handling needed.");
                     }
                 } catch (error) {
                     displayMessage(`TTS API 호출 오류 (재시도 ${retries + 1}): ${error.message}`, "error");
                     retries++;
                     if (retries < maxRetries) {
-                        // Exponential backoff
                         const delay = Math.pow(2, retries) * 1000;
                         await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 }
             }
-            
-            // 모든 재시도 실패
-            ttsStatus = 'error';
-            updateAudioButton();
+
+            // 모든 재시도 실패 시 브라우저 TTS로 폴백
+            webSpeechSpeak(pageText);
         }
 
         /**
@@ -742,11 +753,40 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 audioContext.currentTime = 0;
                 audioContext = null;
             }
+            try { if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } catch (_) {}
             if (ttsStatus === 'generating') {
                  displayMessage("TTS 생성 중단됨.", "info");
             }
             ttsStatus = 'ready';
             updateAudioButton();
+        }
+
+        /**
+         * 브라우저 Web Speech API를 사용한 폴백 재생
+         */
+        function webSpeechSpeak(text) {
+            if (!('speechSynthesis' in window)) {
+                displayMessage('브라우저 TTS 미지원. 외부 TTS 키를 설정하세요.', 'error');
+                ttsStatus = 'error';
+                updateAudioButton();
+                return;
+            }
+            stopSpeaking();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            const voices = window.speechSynthesis.getVoices();
+            const preferred = voices.find(v => /en-.*(US|GB)/i.test(v.lang)) || voices[0];
+            if (preferred) utter.voice = preferred;
+            utter.rate = 0.98;
+            utter.pitch = 1.0;
+            utter.onstart = () => { ttsStatus = 'playing'; updateAudioButton(); };
+            utter.onend = () => { ttsStatus = 'ready'; updateAudioButton(); };
+            utter.onerror = (e) => {
+                displayMessage(`Web Speech 오류: ${e.error || e.message || 'Unknown'}`, 'error');
+                ttsStatus = 'error';
+                updateAudioButton();
+            };
+            window.speechSynthesis.speak(utter);
         }
 
         /**
