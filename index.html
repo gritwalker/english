@@ -737,9 +737,9 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             // ----------------------------------------------------------------------------------
 
             // 선호 순서: Google TTS(사용 설정 시) → Gemini TTS → 브라우저 TTS
-            const hasGoogleKey = typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0;
             const useGoogleTts = typeof USE_GOOGLE_TTS !== 'undefined' ? USE_GOOGLE_TTS : false;
-            if (useGoogleTts && hasGoogleKey) {
+            const hasGoogleCred = (typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0) || (typeof GOOGLE_TTS_TOKEN === 'string' && GOOGLE_TTS_TOKEN.trim().length > 0);
+            if (useGoogleTts && hasGoogleCred) {
                 const ok = await speakWithGoogleTTS(pageText);
                 if (ok) return;
             }
@@ -921,9 +921,11 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         }
 
         // --- Google Cloud Text-to-Speech 설정 및 호출 ---
-        const GOOGLE_TTS_API_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=';
+        const GOOGLE_TTS_API_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
         const GOOGLE_TTS_VOICE = 'en-US-Neural2-D';
         const GOOGLE_TTS_API_KEY = '';
+        const GOOGLE_TTS_TOKEN = '';
+        const GOOGLE_TTS_PROXY_URL = '/api/tts';
         const USE_GOOGLE_TTS = true;
 
         async function speakWithGoogleTTS(text) {
@@ -933,19 +935,42 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                     voice: { languageCode: 'en-US', name: GOOGLE_TTS_VOICE },
                     audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0, pitch: 0.0 }
                 };
-                const url = `${GOOGLE_TTS_API_ENDPOINT}${GOOGLE_TTS_API_KEY}`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                // 우선 프록시가 설정되어 있으면 프록시 사용 (서버에서 GCP_SA_KEY로 인증)
+                if (typeof GOOGLE_TTS_PROXY_URL === 'string' && GOOGLE_TTS_PROXY_URL.trim().length > 0) {
+                    const res = await fetch(GOOGLE_TTS_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!res.ok) throw new Error(`Proxy ${res.status}`);
+                    const ct = res.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) {
+                        const data = await res.json();
+                        const audioContent = data?.audioContent;
+                        if (!audioContent) throw new Error('Proxy no audioContent');
+                        const buf = base64ToArrayBuffer(audioContent);
+                        const blob = new Blob([buf], { type: 'audio/mp3' });
+                        const urlObj = URL.createObjectURL(blob);
+                        playAudio(urlObj);
+                        return true;
+                    } else {
+                        const ab = await res.arrayBuffer();
+                        const blob = new Blob([ab], { type: ct || 'audio/mp3' });
+                        const urlObj = URL.createObjectURL(blob);
+                        playAudio(urlObj);
+                        return true;
+                    }
+                }
+
+                // 프록시가 없으면 키 또는 토큰으로 직접 호출 (빌드/로컬 테스트 용)
+                const useKey = typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0;
+                const useToken = !useKey && typeof GOOGLE_TTS_TOKEN === 'string' && GOOGLE_TTS_TOKEN.trim().length > 0;
+                const url = useKey ? `${GOOGLE_TTS_API_ENDPOINT}?key=${GOOGLE_TTS_API_KEY}` : GOOGLE_TTS_API_ENDPOINT;
+                const headers = { 'Content-Type': 'application/json' };
+                if (useToken) headers['Authorization'] = `Bearer ${GOOGLE_TTS_TOKEN}`;
+                const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                 if (!res.ok) throw new Error(`Google TTS ${res.status}`);
                 const data = await res.json();
                 const audioContent = data?.audioContent;
                 if (!audioContent) throw new Error('No audioContent');
                 const buf = base64ToArrayBuffer(audioContent);
                 const blob = new Blob([buf], { type: 'audio/mp3' });
-                 
                 const urlObj = URL.createObjectURL(blob);
                 playAudio(urlObj);
                 return true;
@@ -981,8 +1006,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             }
             ttsStatus = 'generating';
             updateAudioButton();
-            const hasGoogleKey = typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0;
-            if (USE_GOOGLE_TTS && hasGoogleKey) {
+            const hasGoogleCred = (typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0) || (typeof GOOGLE_TTS_TOKEN === 'string' && GOOGLE_TTS_TOKEN.trim().length > 0);
+            if (USE_GOOGLE_TTS && hasGoogleCred) {
                 const ok = await speakWithGoogleTTS(sentence);
                 if (ok) return;
             }
