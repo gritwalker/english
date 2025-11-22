@@ -6,6 +6,7 @@
     <title>중학교 영어 교과서 암기 트레이너 (7과/8과)</title>
     <!-- Tailwind CSS 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>">
     <style>
         /* 사용자 정의 스타일 */
         body {
@@ -74,6 +75,8 @@
         .status-loading {
             @apply bg-blue-100 text-blue-700;
         }
+        .top-nav { @apply sticky top-0 z-20 bg-white/90 backdrop-blur border-b; }
+        .footer-bar { @apply fixed bottom-0 inset-x-0 z-20 bg-white/90 backdrop-blur border-t; }
         /* 문장 카드 + 스피커 아이콘 */
         .sentence-row { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem; }
         .sentence-text { flex: 1; }
@@ -89,7 +92,14 @@
 <body>
 
     <div class="container-wrapper">
-        <header class="text-center py-6">
+        <header class="top-nav">
+            <div class="max-w-3xl mx-auto flex items-center justify-between p-3">
+                <div class="text-sm font-semibold text-gray-700">영어 암기 도우미</div>
+                <div class="flex gap-2">
+                    <button onclick="processText(LESSON_7_SCRIPT, 'Lesson 7: Rada\'s New World')" class="btn btn-primary">7과</button>
+                    <button onclick="processText(LESSON_8_SCRIPT, 'Lesson 8: Uigwe and Jikji')" class="btn btn-primary">8과</button>
+                </div>
+            </div>
         </header>
 
         <main id="app-container">
@@ -130,40 +140,23 @@
 
                     <div id="tts-status-message" class="hidden status-message"></div>
 
-                    <div class="flex flex-wrap justify-center gap-3 mt-4">
-                        <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
-                        <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
-                        <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
-                        <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
-                        <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
-                        <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2 text-center">난이도가 높을수록 균형 있게 더 많은 단어가 가려집니다.</p>
+                    <p class="text-sm text-gray-500 mt-2 text-center">난이도는 하단 메뉴에서 변경하세요.</p>
                 </div>
 
                 <!-- 본문 표시 영역 -->
                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-800">
-                        페이지 <span id="current-page-display">1</span> / <span id="total-pages-display">1</span>
-                    </h3>
+                    <div class="flex items-center justify-between mb-4 border-b pb-2">
+                        <button id="prev-page-btn" onclick="goToPrevPage()" class="btn btn-primary" disabled>&lt; 이전 페이지</button>
+                        <h3 class="text-lg font-semibold text-gray-800">페이지 <span id="current-page-display">1</span> / <span id="total-pages-display">1</span></h3>
+                        <button id="next-page-btn" onclick="goToNextPage()" class="btn btn-primary" disabled>다음 페이지 &gt;</button>
+                    </div>
                     <div id="text-display-area" class="text-display text-gray-800">
                         여기에 암기할 본문이 표시됩니다.
                     </div>
                 </div>
 
-                <!-- 페이지네이션 및 초기화 버튼 -->
-                <div class="mt-6 flex flex-col sm:flex-row justify-between gap-4">
-                    <div class="flex gap-2 sm:w-1/2">
-                        <button id="prev-page-btn" onclick="goToPrevPage()" class="btn btn-primary w-full sm:w-auto" disabled>
-                            &lt; 이전 페이지
-                        </button>
-                        <button id="next-page-btn" onclick="goToNextPage()" class="btn btn-primary w-full sm:w-auto" disabled>
-                            다음 페이지 &gt;
-                        </button>
-                    </div>
-                    <button onclick="resetApp()" class="btn btn-secondary sm:w-1/2">
-                        다른 과 선택 / 초기화
-                    </button>
+                <div class="mt-6">
+                    <button onclick="resetApp()" class="btn btn-secondary w-full">다른 과 선택 / 초기화</button>
                 </div>
             </div>
 
@@ -172,6 +165,16 @@
         <footer class="text-center text-sm text-gray-500 mt-8 py-4">
             &copy; 2024 영어 암기 도우미.
         </footer>
+    </div>
+    <div id="difficulty-footer" class="footer-bar hidden">
+        <div class="max-w-3xl mx-auto px-3 py-2 flex items-center justify-center gap-2">
+            <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
+            <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
+            <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
+            <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
+            <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
+            <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
+        </div>
     </div>
 
     <script>
@@ -547,6 +550,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             isAnswerVisible = false;
             inputSection.classList.add('hidden');
             memorizationSection.classList.remove('hidden');
+            document.getElementById('difficulty-footer').classList.remove('hidden');
             
             updateToggleAnswerButton();
             renderPage();
@@ -850,9 +854,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             }
             userStopped = true;
             try { if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } catch (_) {}
-            if (ttsStatus === 'generating') {
-                 displayMessage("TTS 생성 중단됨.", "info");
-            }
+            if (ttsStatus === 'generating') {}
             ttsStatus = 'ready';
             updateAudioButton();
         }
@@ -1121,6 +1123,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             // UI 상태 전환
             memorizationSection.classList.add('hidden');
             inputSection.classList.remove('hidden');
+            document.getElementById('difficulty-footer').classList.add('hidden');
             
             updateAudioButton();
             displayMessage("새로운 과를 선택해 주세요.", "info");
