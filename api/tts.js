@@ -1,4 +1,3 @@
-import { TextToSpeechClient } from '@google-cloud/text-to-speech'
 import { GoogleAuth } from 'google-auth-library'
 
 export default async function handler(req, res) {

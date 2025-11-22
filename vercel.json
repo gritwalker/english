@@ -1,5 +1,4 @@
 {
-  "extends": null,
   "version": 2,
   "builds": [
     { "src": "api/tts.js", "use": "@vercel/node" }
