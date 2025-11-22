@@ -74,10 +74,10 @@
         .status-loading {
             @apply bg-blue-100 text-blue-700;
         }
-        /* 문장 행 + 스피커 아이콘 */
-        .sentence-row { display: flex; align-items: flex-start; margin-bottom: 1rem; }
+        /* 문장 카드 + 스피커 아이콘 */
+        .sentence-row { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem; }
         .sentence-text { flex: 1; }
-        .sentence-speaker { @apply inline-flex items-center justify-center w-7 h-7 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 mr-2; }
+        .sentence-speaker { @apply inline-flex items-center justify-center w-8 h-8 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200; }
         /* 모바일 최적화 */
         @media (max-width: 640px) {
             .container-wrapper { padding: 0.75rem; }
@@ -471,6 +471,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         let wordElements = [];
         let globallyMaskableIndices = [];
         let currentMaskedIndices = new Set();
+        let sentences = [];
         
         let difficultyLevel = 0;
         let isAnswerVisible = false;
@@ -508,21 +509,29 @@ Dr. Park: I hope people will become more interested in our national treasures ab
          * 선택된 텍스트를 처리하고 암기 모드를 시작합니다.
          */
         function processText(rawText, title) {
-            let text = rawText.trim().replace(/\r\n/g, '\n');
-            if (text.length < 10) {
+            const textOrArray = Array.isArray(rawText) ? rawText : rawText.trim().replace(/\r\n/g, '\n');
+            if (!Array.isArray(rawText) && textOrArray.length < 10) {
                 displayMessage("선택된 본문이 너무 짧습니다.", "error");
                 return;
             }
 
             stopSpeaking();
             
-            // 기존 줄바꿈을 그대로 사용
-            originalText = text;
+            // 한 문장씩 배열로 분리하여 사용
+            if (Array.isArray(textOrArray)) {
+                sentences = textOrArray.map(s => String(s).trim()).filter(Boolean);
+            } else {
+                sentences = textOrArray.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+                if (!sentences.length) {
+                    sentences = splitIntoSentences(textOrArray);
+                }
+            }
+            originalText = sentences.join('\n\n');
             currentLessonTitle = title;
             lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`;
             
-            // 1. 사용자가 넣은 빈 줄(두 개 이상의 \n)을 기준으로 문장을 분리
-            chunks = originalText.split(/\n{2,}/).map(s => s.trim());
+            // 1. 페이지 청크는 문장 배열 자체를 사용
+            chunks = [...sentences];
             totalPages = Math.ceil(chunks.length / chunksPerPage);
             currentPage = 1;
             
@@ -550,36 +559,21 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             const regex = /([a-zA-Z0-9]+|[^a-zA-Z0-9\s]+|\s+)/g;
             wordElements = [];
             globallyMaskableIndices = [];
-            
-            let match;
-            let currentChunkIndex = 0;
-            // 청크 경계: 연속 줄바꿈들은 하나의 청크 경계로 취급하기 위해 그대로 유지
-            const textWithBreaks = originalText.replace(/\n/g, ' \n ');
-            let lastWasNewline = false;
-
-            while ((match = regex.exec(textWithBreaks)) !== null) {
-                const element = match[0];
-                const isWord = /[a-zA-Z0-9]/.test(element) && element.length > 1;
-
-                if (element === '\n') {
-                    if (!lastWasNewline) {
-                        currentChunkIndex++;
-                    }
-                    lastWasNewline = true;
-                } else {
-                    lastWasNewline = false;
+            let sentenceIndex = 0;
+            for (const s of sentences) {
+                let match;
+                while ((match = regex.exec(s)) !== null) {
+                    const element = match[0];
+                    const isWord = /[a-zA-Z0-9]/.test(element) && element.length > 1;
+                    wordElements.push({
+                        text: element.trim() === '' ? ' ' : element,
+                        isWord,
+                        chunkIndex: sentenceIndex,
+                        globalIndex: wordElements.length
+                    });
+                    if (isWord) globallyMaskableIndices.push(wordElements.length - 1);
                 }
-
-                wordElements.push({
-                    text: element.trim() === '' && element !== '\n' ? ' ' : element,
-                    isWord: isWord,
-                    chunkIndex: currentChunkIndex,
-                    globalIndex: wordElements.length
-                });
-
-                if (isWord) {
-                    globallyMaskableIndices.push(wordElements.length - 1);
-                }
+                sentenceIndex++;
             }
         }
 
