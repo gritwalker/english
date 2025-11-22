@@ -739,7 +739,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             // 선호 순서: Google TTS(사용 설정 시) → Gemini TTS → 브라우저 TTS
             const useGoogleTts = typeof USE_GOOGLE_TTS !== 'undefined' ? USE_GOOGLE_TTS : false;
             const hasGoogleCred = (typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0) || (typeof GOOGLE_TTS_TOKEN === 'string' && GOOGLE_TTS_TOKEN.trim().length > 0);
-            if (useGoogleTts && hasGoogleCred) {
+            const hasProxy = typeof GOOGLE_TTS_PROXY_URL === 'string' && GOOGLE_TTS_PROXY_URL.trim().length > 0;
+            if (useGoogleTts && (hasProxy || hasGoogleCred)) {
                 const ok = await speakWithGoogleTTS(pageText);
                 if (ok) return;
             }
@@ -1007,7 +1008,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             ttsStatus = 'generating';
             updateAudioButton();
             const hasGoogleCred = (typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0) || (typeof GOOGLE_TTS_TOKEN === 'string' && GOOGLE_TTS_TOKEN.trim().length > 0);
-            if (USE_GOOGLE_TTS && hasGoogleCred) {
+            const hasProxy = typeof GOOGLE_TTS_PROXY_URL === 'string' && GOOGLE_TTS_PROXY_URL.trim().length > 0;
+            if (USE_GOOGLE_TTS && (hasProxy || hasGoogleCred)) {
                 const ok = await speakWithGoogleTTS(sentence);
                 if (ok) return;
             }
