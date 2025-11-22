@@ -939,19 +939,24 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 // 우선 프록시가 설정되어 있으면 프록시 사용 (서버에서 GCP_SA_KEY로 인증)
                 if (typeof GOOGLE_TTS_PROXY_URL === 'string' && GOOGLE_TTS_PROXY_URL.trim().length > 0) {
                     const res = await fetch(GOOGLE_TTS_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!res.ok) throw new Error(`Proxy ${res.status}`);
+                    const raw = await res.text();
                     const ct = res.headers.get('content-type') || '';
+                    let data = null;
+                    try { data = JSON.parse(raw); } catch (_) {}
+                    if (!res.ok) {
+                        const msg = data?.error?.message || data?.error || raw || `Proxy HTTP ${res.status}`;
+                        throw new Error(String(msg));
+                    }
                     if (ct.includes('application/json')) {
-                        const data = await res.json();
                         const audioContent = data?.audioContent;
-                        if (!audioContent) throw new Error('Proxy no audioContent');
+                        if (!audioContent) throw new Error('Proxy returned no audioContent');
                         const buf = base64ToArrayBuffer(audioContent);
                         const blob = new Blob([buf], { type: 'audio/mp3' });
                         const urlObj = URL.createObjectURL(blob);
                         playAudio(urlObj);
                         return true;
                     } else {
-                        const ab = await res.arrayBuffer();
+                        const ab = new TextEncoder().encode(raw);
                         const blob = new Blob([ab], { type: ct || 'audio/mp3' });
                         const urlObj = URL.createObjectURL(blob);
                         playAudio(urlObj);
@@ -966,8 +971,13 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 const headers = { 'Content-Type': 'application/json' };
                 if (useToken) headers['Authorization'] = `Bearer ${GOOGLE_TTS_TOKEN}`;
                 const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-                if (!res.ok) throw new Error(`Google TTS ${res.status}`);
-                const data = await res.json();
+                const raw = await res.text();
+                let data = null;
+                try { data = JSON.parse(raw); } catch (_) {}
+                if (!res.ok) {
+                    const msg = data?.error?.message || data?.error || raw || `Google TTS HTTP ${res.status}`;
+                    throw new Error(String(msg));
+                }
                 const audioContent = data?.audioContent;
                 if (!audioContent) throw new Error('No audioContent');
                 const buf = base64ToArrayBuffer(audioContent);
