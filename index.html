@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중학교 영어 교과서 암기 트레이너 (7과/8과)</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 사용자 정의 스타일 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+            color: #1f2937;
+            touch-action: manipulation; /* 모바일에서 탭 반응성 향상 */
+        }
+        .container-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .text-display {
+            white-space: pre-wrap; /* 줄 바꿈 유지 */
+            line-height: 1.8;
+            font-size: 1.125rem;
+            min-height: 200px;
+        }
+        /* 빈칸 스타일 */
+        .masked-word {
+            color: transparent; /* 텍스트 숨기기 */
+            background-color: #e0e7ff; /* 빈칸 배경색 */
+            border-radius: 4px;
+            padding: 0 4px;
+            margin: 0 2px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 1.5rem; /* 빈칸 최소 너비 */
+            transition: background-color 0.15s ease;
+        }
+        .masked-word.show-answer {
+            color: #1f2937; /* 정답 보기 모드일 때 텍스트 표시 */
+            background-color: #d1fae5;
+        }
+        /* 버튼 스타일 */
+        .btn {
+            @apply px-4 py-2 font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50;
+        }
+        .btn-secondary {
+            @apply bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-400 focus:ring-opacity-50;
+        }
+        .btn-green {
+            @apply bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500 focus:ring-opacity-50;
+        }
+        .btn-audio {
+             @apply bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-500 focus:ring-opacity-50;
+        }
+        .btn:disabled {
+            @apply opacity-50 cursor-not-allowed;
+        }
+        textarea {
+            resize: vertical;
+        }
+        .status-message {
+            @apply text-sm mt-2 p-2 rounded-lg text-center;
+        }
+        .status-error {
+            @apply bg-red-100 text-red-700;
+        }
+        .status-loading {
+            @apply bg-blue-100 text-blue-700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-wrapper">
+        <header class="text-center py-6">
+        </header>
+
+        <main id="app-container">
+
+            <!-- 1. 본문 선택 섹션 -->
+            <div id="input-section" class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-600">1단계: 외울 과 선택</h2>
+                <p class="text-gray-600 mb-4">학습할 과(Lesson)를 선택하세요. (고품질 TTS 사용)</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button onclick="processText(LESSON_7_SCRIPT, 'Lesson 7: Rada\'s New World')" class="btn btn-primary w-full">
+                        Lesson 7 스크립트 외우기
+                    </button>
+                    <button onclick="processText(LESSON_8_SCRIPT, 'Lesson 8: Uigwe and Jikji')" class="btn btn-primary w-full">
+                        Lesson 8 스크립트 외우기
+                    </button>
+                </div>
+                <div id="tts-status-message-initial" class="status-message hidden mt-4"></div>
+            </div>
+
+            <!-- 2. 암기 모드 섹션 -->
+            <div id="memorization-section" class="hidden">
+
+                <!-- 난이도 조절 및 상태 -->
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
+                    <h2 id="lesson-title" class="text-xl font-semibold mb-3 text-indigo-600">2단계: 빈칸 채우며 외우기</h2>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <span id="current-difficulty-display" class="text-lg font-medium text-gray-700">난이도: 쉬움 (0% 가림)</span>
+                        <div class="flex gap-2">
+                            <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn btn-green">
+                                정답 보기/숨기기
+                            </button>
+                            <button id="audio-btn" onclick="toggleAudio()" class="btn btn-audio">
+                                🔊 음성 듣기
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="tts-status-message" class="hidden status-message"></div>
+
+                    <div class="flex flex-wrap justify-center gap-3 mt-4">
+                        <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
+                        <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
+                        <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
+                        <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
+                        <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
+                        <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2 text-center">난이도가 높을수록 균형 있게 더 많은 단어가 가려집니다.</p>
+                </div>
+
+                <!-- 본문 표시 영역 -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-800">
+                        페이지 <span id="current-page-display">1</span> / <span id="total-pages-display">1</span>
+                    </h3>
+                    <div id="text-display-area" class="text-display text-gray-800">
+                        여기에 암기할 본문이 표시됩니다.
+                    </div>
+                </div>
+
+                <!-- 페이지네이션 및 초기화 버튼 -->
+                <div class="mt-6 flex flex-col sm:flex-row justify-between gap-4">
+                    <div class="flex gap-2 sm:w-1/2">
+                        <button id="prev-page-btn" onclick="goToPrevPage()" class="btn btn-primary w-full sm:w-auto" disabled>
+                            &lt; 이전 페이지
+                        </button>
+                        <button id="next-page-btn" onclick="goToNextPage()" class="btn btn-primary w-full sm:w-auto" disabled>
+                            다음 페이지 &gt;
+                        </button>
+                    </div>
+                    <button onclick="resetApp()" class="btn btn-secondary sm:w-1/2">
+                        다른 과 선택 / 초기화
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="text-center text-sm text-gray-500 mt-8 py-4">
+            &copy; 2024 영어 암기 도우미.
+        </footer>
+    </div>
+
+    <script>
+        // --- Lesson Scripts ---
+        const LESSON_7_SCRIPT = `Rada lived on a little world, far out in space. She lived there with her father, mother, and brother Jonny. Rada’s father and other people worked on spaceships. Only Rada and Jonny were children, and they were born in space.
+One day, Dad told Rada and Jonny, “We’re going back to Earth tomorrow.”
+Rada and Jonny looked at Dad in surprise and floated towards him.
+Rada asked Dad, “What’s it like on Earth?”
+“Everything is different there. For example, the sky is blue,” answered Dad.
+“I’ve never seen a blue sky,” said Jonny.
+“The sky is always black here,” said Rada.
+“You don’t have to wear your big heavy space suits because there is air everywhere. 
+It's also hard to jump there because Earth pulls you down,” said Dad. 
+“What else?” asked Rada.
+“There are hills, and they are covered with soft green grass. You can roll down the hills,” answered Mom.
+“Dad, have you ever rolled down a hill?” asked Rada.
+“Yes, it’s really amazing!” answered Dad.
+Jonny was thirsty, so he opened a milk container and shook it. The milk floated in the air and formed balls. Jonny swallowed the balls.
+“Jonny, if you drink milk that way on Earth, you’ll get wet,” said Mom.
+Later that night, Rada and Jonny talked a long time about Earth. It was exciting to think about all the new things they were going to see and do. There was one new thing Rada and Jonny really wanted to do. They thought about it all night and didn’t tell Mom and Dad about it. It was their secret. 
+The next day, Rada’s family got on a spaceship.
+“It’s going to be a long trip,” said Mom.
+“That’s alright. I’m so excited!” said Rada.
+The spaceship finally landed.
+“Dad, it’s difficult to walk on Earth,” said Rada.
+“I know. Earth is pulling you down,” said Dad.
+Rada and Jonny couldn’t float anymore. That was the first new thing.
+“What’s that sound?” asked Rada.
+“A bird is singing,” said Mom.
+“I’ve never heard a bird sing,” said Rada.
+“And I’ve never felt the wind,” said Jonny.
+These were all new things.
+Rada and Jonny ran up the nearest hill. At the top, they looked at each other and laughed. Then they lay down on the soft green grass and rolled down the hill. That was their secret!
+“This is the best new thing of all!” shouted Rada and Jonny. And they ran up to the top of the hill again.`;
+
+        const LESSON_8_SCRIPT = `On May 27, 2011, 297 books of Uigwe*, a collection of royal books the French army took in 1866*, came back to Korea. The person behind this return is Dr. Park Byeong-seon, a historian who spent her whole life searching for Korean national treasures abroad.
+  
+You found 297 books of Uigwe in the National Library of France, in Paris. Please tell me how you found them.
+Dr. Park: As soon as I became a researcher at the National Library in 1967, I began to look for Uigwe. After 10 years, in 1977, I finally found the books. I think I looked at more than 30 million books.
+  
+I’m sure you were very excited when you found the books.
+Dr. Park: Yes, I was, but more difficulties were waiting for me. I thought that the books should be returned to Korea, but my bosses at the library didn’t like that idea. They even thought that I was a Korean spy and fired me. After that, I had to go to the library as a visitor, so it was not easy to do research on Uigwe. However, I didn’t give
+up. For more than ten years, I went to the library every day to finish my research. I wanted to show people the value of Uigwe.
+
+The results of your research were published as a book in Korea in 1990. Many Koreans became interested in Uigwe because of your book.
+Dr. Park: Yes. In 1992, the Korean government asked the French government for its return and, finally, the 297 books are here now.
+
+Before I finish this interview, I’d like to ask you about Jikji, a book that changed the history of printing.
+Dr. Park: I found it in my first year at the library. I knew right away that it was very special. I worked hard to prove its value and finally succeeded. At a book exhibition in Paris in 1972, Jikji* was displayed as the oldest book in the world that was printed with
+movable metal type.
+
+Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans thank you for that.
+Dr. Park: I hope people will become more interested in our national treasures abroad and work for their return.`;
+
+
+        // ----------------------------------------------------------------------------------
+        // --- TTS API Configuration (Azure/Edge TTS 대체 안내) ---
+        // ----------------------------------------------------------------------------------
+
+        /* * [현재 환경 (Canvas) 설정]
+         * - 이 환경에서는 고품질 Gemini TTS API를 사용합니다.
+         * - 이 코드는 GitHub에 배포할 때 Azure/Edge TTS API 사용을 위한 구조를 시뮬레이션하고 안내합니다.
+         */
+        const EXTERNAL_TTS_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=";
+        const EXTERNAL_TTS_VOICE_NAME = "Kore"; // Gemini TTS의 고품질 영어 음성
+        const API_KEY = ""; // Canvas 환경에서 자동 주입됨
+
+
+        /*
+         * [★ GitHub 배포 시 Azure/Edge TTS로 변경하는 방법 - 필수 수정 사항]
+         * * 1. 엔드포인트 및 인증 키 설정 (보안 주의!)
+         * // ------------------------------------------------------------------------------------------------------
+         * // GitHub 배포 시 아래 두 상수를 Azure Speech Service 정보로 교체하고, API_KEY 대신 토큰을 사용해야 합니다.
+         * // Azure 엔드포인트는 리전별로 다릅니다 (예: westus.api.cognitive.microsoft.com/sts/v1.0/issueToken).
+         * // CORS 문제 및 API Key 노출을 막기 위해, GitHub Pages에서는 **반드시** Node.js 등 서버를 사용하여 
+         * // Azure 인증 토큰을 먼저 발급받은 후, 그 토큰을 사용하여 아래 API를 호출해야 합니다.
+         * // ------------------------------------------------------------------------------------------------------
+         * // const AZURE_TTS_ENDPOINT = 'https://[Your Region].tts.speech.microsoft.com/cognitiveservices/v1';
+         * // const AZURE_TOKEN_SERVICE = 'YOUR_PROXY_SERVER/token-service-url'; // (토큰 발급을 위한 서버 URL)
+         * // const AZURE_TTS_VOICE = 'en-US-JennyNeural'; // Edge/Azure의 고품질 음성으로 변경
+         */
+        
+        let audioContext;
+        let audioSource;
+
+        /**
+         * Base64 문자열을 ArrayBuffer로 변환합니다. (TTS API에서 Base64로 인코딩된 PCM 데이터 반환)
+         */
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        /**
+         * Signed 16-bit PCM 데이터를 WAV 파일 형식의 Blob으로 변환합니다.
+         */
+        function pcmToWav(pcm16, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            
+            const buffer = new ArrayBuffer(44 + pcm16.length * 2); 
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            const writeString = (str) => {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset++, str.charCodeAt(i));
+                }
+            };
+            
+            const writeUint32 = (val) => {
+                view.setUint32(offset, val, true);
+                offset += 4;
+            };
+
+            const writeUint16 = (val) => {
+                view.setUint16(offset, val, true);
+                offset += 2;
+            };
+
+            // 1. RIFF chunk
+            writeString('RIFF');
+            writeUint32(36 + pcm16.length * 2); 
+            writeString('WAVE');
+
+            // 2. fmt chunk
+            writeString('fmt ');
+            writeUint32(16); 
+            writeUint16(1); 
+            writeUint16(numChannels); 
+            writeUint32(sampleRate); 
+            writeUint32(byteRate); 
+            writeUint16(blockAlign); 
+            writeUint16(bitsPerSample); 
+
+            // 3. data chunk
+            writeString('data');
+            writeUint32(pcm16.length * 2); 
+
+            // PCM 데이터 복사
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(offset, pcm16[i], true);
+                offset += 2;
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+
+        // --- Seeded Random Functions for Consistent Masking ---
+        let prngSeed = 1;
+        let ttsStatus = 'ready'; 
+
+        /**
+         * 텍스트를 기반으로 일관된 난수 시드를 생성하는 간단한 해시 함수
+         */
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        /**
+         * 난수 생성기 초기화
+         */
+        function seedPrng(seed) {
+            prngSeed = seed % 2147483647;
+            if (prngSeed <= 0) prngSeed = 1;
+        }
+
+        /**
+         * 다음 난수 (0 ~ 1) 생성
+         */
+        function nextPrng() {
+            prngSeed = (prngSeed * 16807) % 2147483647;
+            return (prngSeed - 1) / 2147483646;
+        }
+
+        /**
+         * 시드를 기반으로 일관성 있게 배열을 섞는 Fisher-Yates shuffle
+         */
+        function seededShuffle(array) {
+            const shuffled = [...array];
+            const initialSeed = simpleHash(originalText);
+            seedPrng(initialSeed);
+
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(nextPrng() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // --- 전역 상태 및 상수 ---
+        let originalText = "";
+        let currentLessonTitle = "";
+        let wordElements = [];
+        let globallyMaskableIndices = [];
+        let currentMaskedIndices = new Set();
+        
+        let difficultyLevel = 0;
+        let isAnswerVisible = false;
+
+        let chunks = [];
+        const chunksPerPage = 5;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        const difficultyMap = {
+            0: { percentage: 0, label: "쉬움" },
+            1: { percentage: 20, label: "약간 쉬움" },
+            2: { percentage: 40, label: "보통" },
+            3: { percentage: 60, label: "약간 어려움" },
+            4: { percentage: 80, label: "어려움" },
+            5: { percentage: 100, label: "전체 가림" }
+        };
+
+        const inputSection = document.getElementById('input-section');
+        const memorizationSection = document.getElementById('memorization-section');
+        const textDisplayArea = document.getElementById('text-display-area');
+        const difficultyDisplay = document.getElementById('current-difficulty-display');
+        const toggleAnswerBtn = document.getElementById('toggle-answer-btn');
+        const currentPageDisplay = document.getElementById('current-page-display');
+        const totalPagesDisplay = document.getElementById('total-pages-display');
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const audioBtn = document.getElementById('audio-btn');
+        const ttsStatusMessage = document.getElementById('tts-status-message');
+        const ttsStatusMessageInitial = document.getElementById('tts-status-message-initial');
+        const lessonTitleEl = document.getElementById('lesson-title');
+
+
+        /**
+         * 선택된 텍스트를 처리하고 암기 모드를 시작합니다.
+         */
+        function processText(rawText, title) {
+            let text = rawText.trim().replace(/\r\n/g, '\n');
+            if (text.length < 10) {
+                displayMessage("선택된 본문이 너무 짧습니다.", "error");
+                return;
+            }
+
+            stopSpeaking();
+            
+            // --- 가독성 개선: 문장마다 줄바꿈 추가 ---
+            text = text.replace(/([.?!])\s+(?=[A-Z][a-z])/g, '$1\n');
+            text = text.replace(/([.?!])\s*$/g, '$1\n');
+            text = text.replace(/\n\n+/g, '\n\n');
+
+            originalText = text;
+            currentLessonTitle = title;
+            lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`;
+            
+            // 1. 텍스트를 줄('\n') 단위로 분할하여 페이지 청크 준비
+            chunks = originalText.split('\n').filter(chunk => chunk.trim() !== '');
+            totalPages = Math.ceil(chunks.length / chunksPerPage);
+            currentPage = 1;
+            
+            // 2. 전체 단어를 토큰화하고 마스킹 가능한 인덱스 추출
+            prepareWords(); 
+            
+            // 3. 난이도 초기화 및 마스킹 인덱스 업데이트
+            setDifficulty(0); 
+
+            // 4. UI 상태 전환
+            isAnswerVisible = false;
+            inputSection.classList.add('hidden');
+            memorizationSection.classList.remove('hidden');
+            
+            updateToggleAnswerButton();
+            renderPage();
+            updateAudioButton(); 
+            updatePaginationControls();
+        }
+
+        /**
+         * 텍스트를 단어와 구분 기호로 분리하고, 마스킹 가능한 단어 인덱스를 추출합니다.
+         */
+        function prepareWords() {
+            const regex = /([a-zA-Z0-9]+|[^a-zA-Z0-9\s]+|\s+)/g;
+            wordElements = [];
+            globallyMaskableIndices = [];
+            
+            let match;
+            let currentChunkIndex = 0;
+            const textWithBreaks = originalText.replace(/\n/g, ' \n ');
+
+            while ((match = regex.exec(textWithBreaks)) !== null) {
+                const element = match[0];
+                const isWord = /[a-zA-Z0-9]/.test(element) && element.length > 1;
+
+                if (element === '\n') {
+                    currentChunkIndex++;
+                }
+
+                wordElements.push({
+                    text: element.trim() === '' && element !== '\n' ? ' ' : element,
+                    isWord: isWord,
+                    chunkIndex: currentChunkIndex,
+                    globalIndex: wordElements.length
+                });
+
+                if (isWord) {
+                    globallyMaskableIndices.push(wordElements.length - 1);
+                }
+            }
+        }
+
+        /**
+         * 현재 난이도에 따라 마스킹할 단어 인덱스를 업데이트합니다.
+         */
+        function updateMaskedIndices() {
+            const { percentage } = difficultyMap[difficultyLevel];
+            
+            const maxMaskable = globallyMaskableIndices.length;
+            const wordsToHide = Math.ceil(maxMaskable * (percentage / 100));
+
+            const shuffledIndices = seededShuffle(globallyMaskableIndices);
+
+            const selectedIndices = shuffledIndices.slice(0, wordsToHide);
+
+            currentMaskedIndices = new Set(selectedIndices);
+        }
+        
+        /**
+         * 현재 페이지에 해당하는 텍스트를 HTML로 렌더링합니다.
+         */
+        function renderPage() {
+            if (!wordElements.length) return;
+
+            const startChunkIndex = (currentPage - 1) * chunksPerPage;
+            const endChunkIndex = currentPage * chunksPerPage - 1;
+
+            const pageElements = wordElements.filter(element => {
+                return element.chunkIndex >= startChunkIndex && element.chunkIndex <= endChunkIndex;
+            });
+
+            const html = pageElements.map((element) => {
+                if (element.text === '\n') {
+                    return '<br>';
+                }
+
+                if (element.text === ' ') {
+                    return element.text;
+                }
+
+                if (element.isWord && currentMaskedIndices.has(element.globalIndex)) {
+                    const blankLength = element.text.length > 5 ? '____' : '___'; 
+                    const displayContent = isAnswerVisible ? element.text : blankLength;
+                    
+                    const answerClass = isAnswerVisible ? ' show-answer' : '';
+                    
+                    return `<span class="masked-word${answerClass}">${displayContent}</span>`;
+                }
+                
+                return element.text;
+            }).join('');
+
+            textDisplayArea.innerHTML = html;
+            updatePaginationControls();
+        }
+
+        /**
+         * 난이도를 설정하고 텍스트를 다시 렌더링합니다.
+         */
+        function setDifficulty(level) {
+            difficultyLevel = level;
+            stopSpeaking();
+            updateMaskedIndices();
+            isAnswerVisible = false;
+            updateToggleAnswerButton();
+            renderPage();
+            updateDifficultyDisplay();
+        }
+
+        /**
+         * 정답 보기/숨기기 상태를 전환하고 텍스트를 다시 렌더링합니다.
+         */
+        function toggleAnswer() {
+            isAnswerVisible = !isAnswerVisible;
+            updateToggleAnswerButton();
+            renderPage();
+        }
+
+        /**
+         * 난이도 표시 UI를 업데이트합니다.
+         */
+        function updateDifficultyDisplay() {
+            const { percentage, label } = difficultyMap[difficultyLevel];
+            difficultyDisplay.textContent = `난이도: ${label} (${percentage}% 가림)`;
+        }
+
+        /**
+         * 정답 보기 버튼 텍스트를 업데이트합니다.
+         */
+        function updateToggleAnswerButton() {
+            toggleAnswerBtn.textContent = isAnswerVisible ? '정답 숨기기' : '정답 보기';
+        }
+
+        // --- 페이지네이션 함수 ---
+        function goToPrevPage() {
+            stopSpeaking();
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage();
+            }
+        }
+
+        function goToNextPage() {
+            stopSpeaking();
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage();
+            }
+        }
+        
+        function updatePaginationControls() {
+            currentPageDisplay.textContent = currentPage;
+            totalPagesDisplay.textContent = totalPages;
+
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages;
+        }
+
+
+        // --- TTS (음성 듣기) 함수 ---
+        
+        /**
+         * 현재 페이지의 원문 텍스트를 읽어줍니다.
+         */
+        async function speakCurrentPage() {
+            if (ttsStatus === 'generating' || ttsStatus === 'playing') {
+                stopSpeaking();
+                return;
+            }
+
+            ttsStatus = 'generating';
+            updateAudioButton();
+
+            // 현재 페이지의 원문 텍스트 추출
+            const startChunkIndex = (currentPage - 1) * chunksPerPage;
+            const endChunkIndex = Math.min(currentPage * chunksPerPage, chunks.length);
+            const pageText = chunks.slice(startChunkIndex, endChunkIndex).join('. '); 
+
+            if (pageText.trim().length === 0) {
+                displayMessage("읽어줄 텍스트가 없습니다.", "warning");
+                ttsStatus = 'ready';
+                updateAudioButton();
+                return;
+            }
+
+            // ----------------------------------------------------------------------------------
+            // [Azure/Edge TTS SSML 요청 구조 예시 (GitHub 배포 시 참고)]
+            /*
+            const AZURE_SSML = `<speak version='1.0' xml:lang='en-US'>
+                <voice name='en-US-JennyNeural'>${pageText}</voice>
+            </speak>`;
+
+            const AZURE_HEADERS = {
+                'X-Microsoft-OutputFormat': 'audio-16khz-32kbitrate-mono-mp3',
+                'Content-Type': 'application/ssml+xml',
+                // 'Authorization': 'Bearer YOUR_TOKEN_FROM_TOKEN_SERVICE' // GitHub 배포 시 필수
+            };
+            
+            const AZURE_ENDPOINT = 'YOUR_AZURE_REGION_ENDPOINT/v1/synthesize';
+            */
+            // ----------------------------------------------------------------------------------
+
+            // 현재 환경(Canvas)에서는 Gemini TTS API 사용 (Azure 구조를 대체)
+            const payload = {
+                contents: [{ parts: [{ text: pageText }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: EXTERNAL_TTS_VOICE_NAME }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const apiUrlWithKey = `${EXTERNAL_TTS_API_ENDPOINT}${API_KEY}`;
+            let retries = 0;
+            const maxRetries = 3;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(apiUrlWithKey, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                        // Gemini TTS는 Base64 인코딩된 PCM을 반환 (WAV 변환 필요)
+                        const rateMatch = mimeType.match(/rate=(\d+)/);
+                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 16000;
+                        
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        
+                        playAudio(audioUrl);
+                        return; // 성공적으로 재생 시작
+                    } else {
+                        // ★ 주의: Azure TTS를 사용하는 경우, 이 부분의 응답 처리 로직을 
+                        // 반환되는 오디오 형식(MP3, WAV 등)에 맞게 완전히 바꿔야 합니다! 
+                        throw new Error("Invalid audio data received or Azure response handling needed.");
+                    }
+                } catch (error) {
+                    displayMessage(`TTS API 호출 오류 (재시도 ${retries + 1}): ${error.message}`, "error");
+                    retries++;
+                    if (retries < maxRetries) {
+                        // Exponential backoff
+                        const delay = Math.pow(2, retries) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+            
+            // 모든 재시도 실패
+            ttsStatus = 'error';
+            updateAudioButton();
+        }
+
+        /**
+         * 오디오 URL을 사용하여 재생하고 상태를 관리합니다.
+         */
+        function playAudio(audioUrl) {
+            stopSpeaking(); // 이전에 재생 중이던 오디오 중지
+
+            audioContext = new Audio();
+            audioContext.src = audioUrl;
+            
+            audioContext.onplay = () => { ttsStatus = 'playing'; updateAudioButton(); };
+            audioContext.onended = () => { ttsStatus = 'ready'; updateAudioButton(); URL.revokeObjectURL(audioUrl); };
+            audioContext.onerror = (e) => { 
+                displayMessage(`Audio playback error: ${e.message || 'Unknown error'}`, "error"); 
+                ttsStatus = 'error'; 
+                updateAudioButton();
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audioContext.play().catch(e => {
+                displayMessage(`Audio playback initiation failed: ${e.message}`, "error");
+                ttsStatus = 'error';
+                updateAudioButton();
+                URL.revokeObjectURL(audioUrl);
+            });
+        }
+
+        /**
+         * 음성 재생을 중지합니다.
+         */
+        function stopSpeaking() {
+            if (audioContext) {
+                audioContext.pause();
+                audioContext.currentTime = 0;
+                audioContext = null;
+            }
+            if (ttsStatus === 'generating') {
+                 displayMessage("TTS 생성 중단됨.", "info");
+            }
+            ttsStatus = 'ready';
+            updateAudioButton();
+        }
+
+        /**
+         * 음성 버튼의 상태를 토글합니다.
+         */
+        function toggleAudio() {
+            if (ttsStatus === 'playing' || ttsStatus === 'generating') {
+                stopSpeaking();
+            } else if (ttsStatus === 'ready') {
+                speakCurrentPage();
+            }
+        }
+        
+        /**
+         * 음성 버튼의 텍스트와 상태를 업데이트합니다.
+         */
+        function updateAudioButton() {
+            let buttonText = '';
+            let isDisabled = false;
+
+            if (ttsStatus === 'generating') {
+                buttonText = '... 음성 생성 중';
+                isDisabled = true;
+            } else if (ttsStatus === 'playing') {
+                buttonText = '⏹️ 음성 중지';
+                isDisabled = false;
+            } else if (ttsStatus === 'error') {
+                buttonText = 'TTS 오류';
+                isDisabled = true;
+            } else { // ready
+                buttonText = '🔊 음성 듣기';
+                isDisabled = false;
+            }
+
+            audioBtn.textContent = buttonText;
+            audioBtn.disabled = isDisabled;
+
+            // 상태 메시지 표시
+            const targetMessageEl = memorizationSection.classList.contains('hidden') ? ttsStatusMessageInitial : ttsStatusMessage;
+            
+            targetMessageEl.classList.remove('hidden', 'status-error', 'status-loading');
+
+            if (ttsStatus === 'generating') {
+                targetMessageEl.classList.add('status-loading');
+                targetMessageEl.textContent = '🔊 고품질 음성을 생성 중입니다. 잠시만 기다려주세요.';
+            } else if (ttsStatus === 'error') {
+                targetMessageEl.classList.add('status-error');
+                targetMessageEl.textContent = 'TTS 오류 발생. 다시 시도하거나 인터넷 연결을 확인하세요.';
+            } else {
+                targetMessageEl.classList.add('hidden');
+            }
+        }
+
+
+        /**
+         * 앱을 초기 상태로 되돌립니다.
+         */
+        function resetApp() {
+            stopSpeaking();
+            originalText = "";
+            currentLessonTitle = "";
+            wordElements = [];
+            globallyMaskableIndices = [];
+            currentMaskedIndices = new Set();
+            difficultyLevel = 0;
+            isAnswerVisible = false;
+            currentPage = 1;
+            totalPages = 1;
+            chunks = [];
+            
+            textDisplayArea.innerHTML = "여기에 암기할 본문이 표시됩니다.";
+
+            // UI 상태 전환
+            memorizationSection.classList.add('hidden');
+            inputSection.classList.remove('hidden');
+            
+            updateAudioButton();
+            displayMessage("새로운 과를 선택해 주세요.", "info");
+        }
+
+        /**
+         * 사용자에게 메시지를 표시합니다 (콘솔에 출력).
+         */
+        function displayMessage(message, type = "info") {
+            const style = type === "error" ? "color: red; font-weight: bold;" : type === "warning" ? "color: orange;" : "color: blue;";
+            console.log(`%c[APP MESSAGE]: ${message}`, style);
+        }
+
+        // 초기 로드 시 실행
+        window.onload = function() {
+            updateAudioButton();
+        };
+
+    </script>
+
+</body>
+</html>
