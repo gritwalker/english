@@ -74,6 +74,10 @@
         .status-loading {
             @apply bg-blue-100 text-blue-700;
         }
+        /* 문장 행 + 스피커 아이콘 */
+        .sentence-row { display: flex; align-items: flex-start; margin-bottom: 0.5rem; }
+        .sentence-text { flex: 1; }
+        .sentence-speaker { @apply inline-flex items-center justify-center w-7 h-7 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 mr-2; }
         /* 모바일 최적화 */
         @media (max-width: 640px) {
             .container-wrapper { padding: 0.75rem; }
@@ -423,13 +427,13 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
             stopSpeaking();
             
-            // --- 가독성 개선: 문장마다 줄바꿈 추가 ---
-            // 문장 끝의 구두점(.?!), 뒤에 따옴표가 있을 수도 있음. 다음 문장이 시작되면 줄바꿈
-            text = text.replace(/([.?!])(["”’']?)\s+(?=["“A-Z])/g, '$1$2\n');
-            // 마지막 문장도 줄바꿈으로 끝나도록 처리
-            text = text.replace(/([.?!])\s*$/g, '$1\n');
-            // 불필요한 다중 공백 줄바꿈 정리
-            text = text.replace(/\n\n+/g, '\n\n');
+            // --- 가독성 개선: 문장마다 줄바꿈 + 한 줄 빈줄 ---
+            // 문장 끝(.?!), 따옴표 포함 가능 → 두 줄바꿈 삽입
+            text = text.replace(/([.?!])(["”’']?)\s+(?=["“A-Z])/g, '$1$2\n\n');
+            // 마지막 문장도 두 줄바꿈으로 마무리
+            text = text.replace(/([.?!])\s*$/g, '$1\n\n');
+            // 과도한 연속 줄바꿈은 최대 두 개로 압축
+            text = text.replace(/\n{3,}/g, '\n\n');
 
             originalText = text;
             currentLessonTitle = title;
@@ -468,13 +472,19 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             let match;
             let currentChunkIndex = 0;
             const textWithBreaks = originalText.replace(/\n/g, ' \n ');
+            let lastWasNewline = false;
 
             while ((match = regex.exec(textWithBreaks)) !== null) {
                 const element = match[0];
                 const isWord = /[a-zA-Z0-9]/.test(element) && element.length > 1;
 
                 if (element === '\n') {
-                    currentChunkIndex++;
+                    if (!lastWasNewline) {
+                        currentChunkIndex++;
+                    }
+                    lastWasNewline = true;
+                } else {
+                    lastWasNewline = false;
                 }
 
                 wordElements.push({
@@ -515,30 +525,24 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             const startChunkIndex = (currentPage - 1) * chunksPerPage;
             const endChunkIndex = currentPage * chunksPerPage - 1;
 
-            const pageElements = wordElements.filter(element => {
-                return element.chunkIndex >= startChunkIndex && element.chunkIndex <= endChunkIndex;
-            });
-
-            const html = pageElements.map((element) => {
-                if (element.text === '\n') {
-                    return '<br>';
-                }
-
-                if (element.text === ' ') {
+            // 문장(청크) 단위로 묶어서 렌더링, 각 문장 앞에 스피커 아이콘 추가
+            let html = '';
+            for (let ci = startChunkIndex; ci <= endChunkIndex; ci++) {
+                const sentenceElements = wordElements.filter(el => el.chunkIndex === ci);
+                if (!sentenceElements.length) continue;
+                const sentenceHtml = sentenceElements.map((element) => {
+                    if (element.text === '\n') return '';
+                    if (element.text === ' ') return element.text;
+                    if (element.isWord && currentMaskedIndices.has(element.globalIndex)) {
+                        const blankLength = element.text.length > 5 ? '____' : '___';
+                        const displayContent = isAnswerVisible ? element.text : blankLength;
+                        const answerClass = isAnswerVisible ? ' show-answer' : '';
+                        return `<span class="masked-word${answerClass}">${displayContent}</span>`;
+                    }
                     return element.text;
-                }
-
-                if (element.isWord && currentMaskedIndices.has(element.globalIndex)) {
-                    const blankLength = element.text.length > 5 ? '____' : '___'; 
-                    const displayContent = isAnswerVisible ? element.text : blankLength;
-                    
-                    const answerClass = isAnswerVisible ? ' show-answer' : '';
-                    
-                    return `<span class="masked-word${answerClass}">${displayContent}</span>`;
-                }
-                
-                return element.text;
-            }).join('');
+                }).join('');
+                html += `<div class="sentence-row"><button class="sentence-speaker" onclick="speakSentence(${ci})" title="이 문장 듣기">🔊</button><div class="sentence-text">${sentenceHtml}</div></div>`;
+            }
 
             textDisplayArea.innerHTML = html;
             updatePaginationControls();
@@ -650,7 +654,13 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             */
             // ----------------------------------------------------------------------------------
 
-            // API 키가 없으면 즉시 브라우저 TTS로 폴백
+            // 선호 순서: Google TTS(사용 설정 시) → Gemini TTS → 브라우저 TTS
+            const hasGoogleKey = typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0;
+            const useGoogleTts = typeof USE_GOOGLE_TTS !== 'undefined' ? USE_GOOGLE_TTS : false;
+            if (useGoogleTts && hasGoogleKey) {
+                const ok = await speakWithGoogleTTS(pageText);
+                if (ok) return;
+            }
             const hasApiKey = typeof API_KEY === 'string' && API_KEY.trim().length > 0;
             if (!hasApiKey) {
                 webSpeechSpeak(pageText);
@@ -772,21 +782,89 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 return;
             }
             stopSpeaking();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = 'en-US';
-            const voices = window.speechSynthesis.getVoices();
-            const preferred = voices.find(v => /en-.*(US|GB)/i.test(v.lang)) || voices[0];
-            if (preferred) utter.voice = preferred;
-            utter.rate = 0.98;
-            utter.pitch = 1.0;
-            utter.onstart = () => { ttsStatus = 'playing'; updateAudioButton(); };
-            utter.onend = () => { ttsStatus = 'ready'; updateAudioButton(); };
-            utter.onerror = (e) => {
-                displayMessage(`Web Speech 오류: ${e.error || e.message || 'Unknown'}`, 'error');
-                ttsStatus = 'error';
-                updateAudioButton();
+            const sentences = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+
+            const getBestEnglishVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                const english = voices.filter(v => /^en(-|_)/i.test(v.lang));
+                const preferredPatterns = [
+                    /Microsoft.*Aria/i,
+                    /Microsoft.*Guy/i,
+                    /Microsoft.*Jenny/i,
+                    /Google US English/i,
+                    /Google UK English/i,
+                    /Samantha/i,
+                    /Daniel/i
+                ];
+                for (const pat of preferredPatterns) {
+                    const found = english.find(v => pat.test(v.name));
+                    if (found) return found;
+                }
+                return english[0] || voices[0] || null;
             };
-            window.speechSynthesis.speak(utter);
+
+            let idx = 0;
+            const speakNext = () => {
+                if (idx >= sentences.length) {
+                    ttsStatus = 'ready';
+                    updateAudioButton();
+                    return;
+                }
+                const utter = new SpeechSynthesisUtterance(sentences[idx]);
+                const voice = getBestEnglishVoice();
+                if (voice) {
+                    utter.voice = voice;
+                    utter.lang = voice.lang;
+                } else {
+                    utter.lang = 'en-US';
+                }
+                utter.rate = 0.95;
+                utter.pitch = 1.0;
+                utter.onstart = () => { ttsStatus = 'playing'; updateAudioButton(); };
+                utter.onend = () => { setTimeout(() => { idx++; speakNext(); }, 220); };
+                utter.onerror = (e) => {
+                    displayMessage(`Web Speech 오류: ${e.error || e.message || 'Unknown'}`, 'error');
+                    ttsStatus = 'error';
+                    updateAudioButton();
+                };
+                window.speechSynthesis.speak(utter);
+            };
+
+            speakNext();
+        }
+
+        // --- Google Cloud Text-to-Speech 설정 및 호출 ---
+        const GOOGLE_TTS_API_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=';
+        const GOOGLE_TTS_VOICE = 'en-US-Neural2-D';
+        const GOOGLE_TTS_API_KEY = '';
+        const USE_GOOGLE_TTS = false;
+
+        async function speakWithGoogleTTS(text) {
+            try {
+                const payload = {
+                    input: { text },
+                    voice: { languageCode: 'en-US', name: GOOGLE_TTS_VOICE },
+                    audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0, pitch: 0.0 }
+                };
+                const url = `${GOOGLE_TTS_API_ENDPOINT}${GOOGLE_TTS_API_KEY}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error(`Google TTS ${res.status}`);
+                const data = await res.json();
+                const audioContent = data?.audioContent;
+                if (!audioContent) throw new Error('No audioContent');
+                const buf = base64ToArrayBuffer(audioContent);
+                const blob = new Blob([buf], { type: 'audio/mp3' });
+                const urlObj = URL.createObjectURL(blob);
+                playAudio(urlObj);
+                return true;
+            } catch (e) {
+                displayMessage(`Google TTS 오류: ${e.message}`, 'error');
+                return false;
+            }
         }
 
         /**
@@ -798,6 +876,25 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             } else if (ttsStatus === 'ready') {
                 speakCurrentPage();
             }
+        }
+        
+        // 문장별 스피커 아이콘 클릭 시 해당 문장만 재생
+        function speakSentence(chunkIndex) {
+            stopSpeaking();
+            const idx = Number(chunkIndex);
+            if (Number.isNaN(idx) || idx < 0 || idx >= chunks.length) {
+                displayMessage('잘못된 문장 인덱스입니다.', 'error');
+                return;
+            }
+            const sentence = chunks[idx];
+            if (!sentence || !sentence.trim()) {
+                displayMessage('재생할 문장이 없습니다.', 'warning');
+                return;
+            }
+            ttsStatus = 'generating';
+            updateAudioButton();
+            // 자체 발음 우선
+            webSpeechSpeak(sentence);
         }
         
         /**
