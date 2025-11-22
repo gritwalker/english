@@ -24,9 +24,14 @@ module.exports = async function handler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      const data = await r.json()
-      if (!r.ok) return res.status(r.status).json({ error: data.error || 'Google TTS error' })
-      return res.status(200).json(data)
+      const raw = await r.text()
+      let data
+      try { data = JSON.parse(raw) } catch { data = null }
+      if (!r.ok) {
+        const err = data?.error || { message: raw || 'Google TTS error' }
+        return res.status(r.status).json({ error: err })
+      }
+      return res.status(200).json(data || { audioContent: null })
     }
 
     if (saKeyJson) {
@@ -40,9 +45,14 @@ module.exports = async function handler(req, res) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.token || token}` },
         body: JSON.stringify(body)
       })
-      const data = await r.json()
-      if (!r.ok) return res.status(r.status).json({ error: data.error || 'Google TTS error' })
-      return res.status(200).json(data)
+      const raw = await r.text()
+      let data
+      try { data = JSON.parse(raw) } catch { data = null }
+      if (!r.ok) {
+        const err = data?.error || { message: raw || 'Google TTS error' }
+        return res.status(r.status).json({ error: err })
+      }
+      return res.status(200).json(data || { audioContent: null })
     }
 
     return res.status(500).json({ error: 'No credentials configured' })
