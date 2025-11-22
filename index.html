@@ -57,10 +57,6 @@
         .btn-green {
             @apply bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500 focus:ring-opacity-50;
         }
-        .btn-outline {
-            @apply px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm;
-        }
-        .nav-card { @apply bg-white rounded-xl shadow-lg border border-gray-200 p-3; }
         .btn-audio {
              @apply bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-500 focus:ring-opacity-50;
         }
@@ -96,24 +92,19 @@
 
     <div class="container-wrapper">
         <header class="top-nav">
-            <div class="max-w-3xl mx-auto p-3">
-                <div class="flex items-center justify-between mb-3">
-                    <button onclick="showHomeTutorial()" class="btn-outline">홈</button>
-                    <div class="text-base font-semibold text-gray-700">영어 암기 도우미</div>
-                    <div class="w-16"></div>
+            <div class="max-w-3xl mx-auto p-3 space-y-3">
+                <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-3 flex flex-col sm:flex-row items-center justify-center gap-2">
+                    <button onclick="processText(LESSON_7_SCRIPT, '7과: Rada\'s New World')" class="w-full sm:w-28 px-4 py-2 font-semibold text-white rounded-lg shadow bg-indigo-600 hover:bg-indigo-700 text-sm sm:text-base">7과 본문</button>
+                    <button onclick="processText(LESSON_8_SCRIPT, '8과: Uigwe and Jikji')" class="w-full sm:w-28 px-4 py-2 font-semibold text-white rounded-lg shadow bg-indigo-600 hover:bg-indigo-700 text-sm sm:text-base">8과 본문</button>
                 </div>
-                <div class="nav-card mb-3 flex items-center justify-center gap-3">
-                    <button onclick="processText(LESSON_7_SCRIPT, '7과: Rada\'s New World')" class="btn btn-primary w-24">7과 본문</button>
-                    <button onclick="processText(LESSON_8_SCRIPT, '8과: Uigwe and Jikji')" class="btn btn-primary w-24">8과 본문</button>
-                </div>
-                <div class="nav-card flex items-center justify-center gap-2">
-                    <button onclick="setDifficulty(0)" class="btn-outline w-16 text-xs">0</button>
-                    <button onclick="setDifficulty(1)" class="btn-outline w-16 text-xs">20</button>
-                    <button onclick="setDifficulty(2)" class="btn-outline w-16 text-xs">40</button>
-                    <button onclick="setDifficulty(3)" class="btn-outline w-16 text-xs">60</button>
-                    <button onclick="setDifficulty(4)" class="btn-outline w-16 text-xs">80</button>
-                    <button onclick="setDifficulty(5)" class="btn-outline w-16 text-xs">100</button>
-                    <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn-outline w-20 text-xs">정답</button>
+                <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-3 grid grid-cols-4 sm:grid-cols-7 gap-1 sm:gap-2 justify-items-center">
+                    <button onclick="setDifficulty(0)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">0</button>
+                    <button onclick="setDifficulty(1)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">20</button>
+                    <button onclick="setDifficulty(2)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">40</button>
+                    <button onclick="setDifficulty(3)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">60</button>
+                    <button onclick="setDifficulty(4)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">80</button>
+                    <button onclick="setDifficulty(5)" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">100</button>
+                    <button id="toggle-answer-btn" onclick="toggleAnswer()" class="px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-full">정답</button>
                 </div>
             </div>
         </header>
@@ -122,59 +113,27 @@
 
             <!-- 본문 선택 섹션 제거됨 -->
 
-            <!-- 초기 메시지 -->
-            <div id="initial-message" class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200 text-center">
-                <h2 class="text-xl font-semibold mb-3 text-indigo-600">영어 암기 도우미</h2>
-                <p class="text-gray-600 mb-4">상단에서 과목과 난이도를 선택해주세요.</p>
-            </div>
+            
 
             <!-- 2. 암기 모드 섹션 -->
             <div id="memorization-section" class="hidden">
 
-                <!-- 상단 컨트롤 바 (난이도 + 정답 보기) -->
-                <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
-<<<<<<< HEAD
-                    <h2 id="lesson-title" class="text-xl font-semibold mb-3 text-indigo-600">2단계: 빈칸 채우며 외우기</h2>
-                    
-                    <div class="flex items-center justify-between mb-4">
-                        <span id="current-difficulty-display" class="text-lg font-medium text-gray-700"></span>
-                        <div class="flex gap-2">
-                            <button id="audio-btn" onclick="toggleAudio()" class="btn btn-audio">
-                                🔊 음성 듣기
-                            </button>
-=======
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="flex flex-wrap justify-start gap-2">
-                            <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
-                            <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
-                            <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
-                            <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
-                            <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
-                            <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
->>>>>>> 93134b8148d1a9e7dd2ef44f202065d5ccd26ee0
-                        </div>
-                        <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn btn-green">정답 보기/숨기기</button>
-                    </div>
-<<<<<<< HEAD
-
-                    <div id="tts-status-message" class="hidden status-message"></div>
-
-
-=======
-                    <div id="tts-status-message" class="hidden status-message mt-3"></div>
->>>>>>> 93134b8148d1a9e7dd2ef44f202065d5ccd26ee0
-                </div>
-
                 <!-- 본문 표시 영역 -->
                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <div class="flex items-center justify-between mb-4 border-b pb-2">
-                        <button id="prev-page-btn" onclick="goToPrevPage()" class="btn btn-primary" disabled>&lt; 이전 페이지</button>
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0 mb-4 border-b pb-2">
+                        <div class="flex gap-2">
+                            <button id="prev-page-btn" onclick="goToPrevPage()" class="px-4 py-2 font-semibold text-white rounded-lg shadow bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50" disabled>&lt; 이전 페이지</button>
+                        </div>
                         <h3 class="text-lg font-semibold text-gray-800">페이지 <span id="current-page-display">1</span> / <span id="total-pages-display">1</span></h3>
-                        <button id="next-page-btn" onclick="goToNextPage()" class="btn btn-primary" disabled>다음 페이지 &gt;</button>
+                        <div class="flex gap-2">
+                            <button id="audio-btn" onclick="toggleAudio()" class="px-4 py-2 font-semibold text-white rounded-lg shadow bg-pink-600 hover:bg-pink-700">🔊 음성 듣기</button>
+                            <button id="next-page-btn" onclick="goToNextPage()" class="px-4 py-2 font-semibold text-white rounded-lg shadow bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50" disabled>다음 페이지 &gt;</button>
+                        </div>
                     </div>
                     <div id="text-display-area" class="text-display text-gray-800">
                         여기에 암기할 본문이 표시됩니다.
                     </div>
+                    <div id="tts-status-message" class="hidden status-message mt-3"></div>
                 </div>
 
                 
@@ -543,7 +502,7 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
             }
             originalText = sentences.join('\n\n');
             currentLessonTitle = title;
-            lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`;
+            if (lessonTitleEl) { lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`; }
             
             // 1. 페이지 청크는 문장 배열 자체를 사용
             chunks = [...sentences];
@@ -558,7 +517,8 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
 
             // UI 상태 전환
             isAnswerVisible = false;
-            document.getElementById('initial-message').classList.add('hidden');
+            const initEl = document.getElementById('initial-message');
+            if (initEl) initEl.classList.add('hidden');
             memorizationSection.classList.remove('hidden');
             
             updateToggleAnswerButton();
@@ -574,14 +534,15 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
             if (!sentences.length) { sentences = splitIntoSentences(textOrArray); }
             originalText = sentences.join('\n\n');
             currentLessonTitle = '영어 본문 외우는 법';
-            lessonTitleEl.textContent = `2단계: ${currentLessonTitle}`;
+            if (lessonTitleEl) { lessonTitleEl.textContent = `2단계: ${currentLessonTitle}`; }
             chunks = [...sentences];
             totalPages = Math.ceil(chunks.length / chunksPerPage);
             currentPage = 1;
             prepareWords();
             setDifficulty(0);
             isAnswerVisible = false;
-            document.getElementById('initial-message').classList.add('hidden');
+            const initEl3 = document.getElementById('initial-message');
+            if (initEl3) initEl3.classList.add('hidden');
             memorizationSection.classList.remove('hidden');
             updateToggleAnswerButton();
             renderPage();
@@ -658,7 +619,7 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
                     }
                     return element.text;
                 }).join('');
-                html += `<div class="sentence-row"><button class="sentence-speaker" onclick="speakSentence(${ci})" title="이 문장 듣기">🔊</button><div class="sentence-text">${sentenceHtml}</div></div>`;
+                html += `<div class="sentence-row"><button class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200" onclick="speakSentence(${ci})" title="이 문장 듣기">🔊</button><div class="sentence-text">${sentenceHtml}</div></div>`;
             }
 
             textDisplayArea.innerHTML = html;
@@ -693,7 +654,7 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
         function updateDifficultyDisplay() {
             if (!difficultyDisplay) return;
             const { percentage, label } = difficultyMap[difficultyLevel];
-            difficultyDisplay.textContent = `난이도: ${label} (${percentage}% 가림)`;
+            if (difficultyDisplay) { difficultyDisplay.textContent = `난이도: ${label} (${percentage}% 가림)`; }
         }
 
         /**
@@ -1115,12 +1076,15 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
                 isDisabled = false;
             }
 
-            audioBtn.textContent = buttonText;
-            audioBtn.disabled = isDisabled;
+            if (audioBtn) {
+                audioBtn.textContent = buttonText;
+                audioBtn.disabled = isDisabled;
+            }
 
             // 상태 메시지 표시
             const targetMessageEl = ttsStatusMessage;
             
+            if (!targetMessageEl) return;
             targetMessageEl.classList.remove('hidden', 'status-error', 'status-loading');
 
             if (ttsStatus === 'generating') {
@@ -1155,7 +1119,8 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
 
             // UI 상태 전환
             memorizationSection.classList.add('hidden');
-            document.getElementById('initial-message').classList.remove('hidden');
+            const initEl2 = document.getElementById('initial-message');
+            if (initEl2) initEl2.classList.remove('hidden');
             
             updateAudioButton();
             displayMessage("새로운 과를 선택해 주세요.", "info");
