@@ -80,7 +80,6 @@
             @apply bg-blue-100 text-blue-700;
         }
         .top-nav { @apply sticky top-0 z-20 bg-white/90 backdrop-blur border-b; }
-        .footer-bar { @apply fixed bottom-0 inset-x-0 z-20 bg-white/90 backdrop-blur border-t; }
         /* 문장 카드 + 스피커 아이콘 */
         .sentence-row { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem; }
         .sentence-text { flex: 1; }
@@ -132,8 +131,9 @@
             <!-- 2. 암기 모드 섹션 -->
             <div id="memorization-section" class="hidden">
 
-                <!-- 난이도 조절 및 상태 -->
+                <!-- 상단 컨트롤 바 (난이도 + 정답 보기) -->
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
+<<<<<<< HEAD
                     <h2 id="lesson-title" class="text-xl font-semibold mb-3 text-indigo-600">2단계: 빈칸 채우며 외우기</h2>
                     
                     <div class="flex items-center justify-between mb-4">
@@ -142,12 +142,27 @@
                             <button id="audio-btn" onclick="toggleAudio()" class="btn btn-audio">
                                 🔊 음성 듣기
                             </button>
+=======
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap justify-start gap-2">
+                            <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
+                            <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
+                            <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
+                            <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
+                            <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
+                            <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
+>>>>>>> 93134b8148d1a9e7dd2ef44f202065d5ccd26ee0
                         </div>
+                        <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn btn-green">정답 보기/숨기기</button>
                     </div>
+<<<<<<< HEAD
 
                     <div id="tts-status-message" class="hidden status-message"></div>
 
 
+=======
+                    <div id="tts-status-message" class="hidden status-message mt-3"></div>
+>>>>>>> 93134b8148d1a9e7dd2ef44f202065d5ccd26ee0
                 </div>
 
                 <!-- 본문 표시 영역 -->
@@ -676,6 +691,7 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
          * 난이도 표시 UI를 업데이트합니다.
          */
         function updateDifficultyDisplay() {
+            if (!difficultyDisplay) return;
             const { percentage, label } = difficultyMap[difficultyLevel];
             difficultyDisplay.textContent = `난이도: ${label} (${percentage}% 가림)`;
         }
@@ -1081,6 +1097,7 @@ Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans 
          * 음성 버튼의 텍스트와 상태를 업데이트합니다.
          */
         function updateAudioButton() {
+            if (!audioBtn) return;
             let buttonText = '';
             let isDisabled = false;
 
