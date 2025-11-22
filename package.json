@@ -1,9 +1,11 @@
 {
   "name": "english-tts-app",
   "private": true,
-  "type": "module",
   "dependencies": {
     "@google-cloud/text-to-speech": "^5.1.0",
     "google-auth-library": "^9.0.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

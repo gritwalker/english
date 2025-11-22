@@ -1,6 +1,6 @@
-import { GoogleAuth } from 'google-auth-library'
+const { GoogleAuth } = require('google-auth-library')
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
       res.setHeader('Access-Control-Allow-Origin', '*')
