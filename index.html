@@ -376,6 +376,13 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             return shuffled;
         }
 
+        // 문장 분리 유틸리티: 개행을 공백으로 정규화 후 .?! 및 따옴표를 포함해 분리
+        function splitIntoSentences(str) {
+            const normalized = str.replace(/\s*\n\s*/g, ' ');
+            const matches = normalized.match(/[^.!?]+[.!?](?:["”’']+)?|[^.!?]+$/g) || [];
+            return matches.map(s => s.trim()).filter(Boolean);
+        }
+
         // --- 전역 상태 및 상수 ---
         let originalText = "";
         let currentLessonTitle = "";
@@ -975,9 +982,3 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
 </body>
 </html>
-        // 문장 분리 유틸리티: 개행을 공백으로 정규화 후 .?! 및 따옴표를 포함해 분리
-        function splitIntoSentences(str) {
-            const normalized = str.replace(/\s*\n\s*/g, ' ');
-            const matches = normalized.match(/[^.!?]+[.!?](?:["”’']+)?|[^.!?]+$/g) || [];
-            return matches.map(s => s.trim()).filter(Boolean);
-        }
