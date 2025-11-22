@@ -917,7 +917,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         const GOOGLE_TTS_API_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=';
         const GOOGLE_TTS_VOICE = 'en-US-Neural2-D';
         const GOOGLE_TTS_API_KEY = '';
-        const USE_GOOGLE_TTS = false;
+        const USE_GOOGLE_TTS = true;
 
         async function speakWithGoogleTTS(text) {
             try {
@@ -959,7 +959,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         }
         
         // 문장별 스피커 아이콘 클릭 시 해당 문장만 재생
-        function speakSentence(chunkIndex) {
+        async function speakSentence(chunkIndex) {
             stopSpeaking();
             const idx = Number(chunkIndex);
             if (Number.isNaN(idx) || idx < 0 || idx >= chunks.length) {
@@ -973,7 +973,44 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             }
             ttsStatus = 'generating';
             updateAudioButton();
-            // 자체 발음 우선
+            const hasGoogleKey = typeof GOOGLE_TTS_API_KEY === 'string' && GOOGLE_TTS_API_KEY.trim().length > 0;
+            if (USE_GOOGLE_TTS && hasGoogleKey) {
+                const ok = await speakWithGoogleTTS(sentence);
+                if (ok) return;
+            }
+            const hasApiKey = typeof API_KEY === 'string' && API_KEY.trim().length > 0;
+            if (hasApiKey) {
+                // Gemini로 폴백
+                const payload = {
+                    contents: [{ parts: [{ text: sentence }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: EXTERNAL_TTS_VOICE_NAME } } }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+                try {
+                    const response = await fetch(`${EXTERNAL_TTS_API_ENDPOINT}${API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (response.ok) {
+                        const result = await response.json();
+                        const part = result?.candidates?.[0]?.content?.parts?.[0];
+                        const audioData = part?.inlineData?.data;
+                        const mimeType = part?.inlineData?.mimeType;
+                        if (audioData && mimeType && mimeType.startsWith('audio/L16')) {
+                            const rateMatch = mimeType.match(/rate=(\d+)/);
+                            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 16000;
+                            const pcmData = base64ToArrayBuffer(audioData);
+                            const pcm16 = new Int16Array(pcmData);
+                            const wavBlob = pcmToWav(pcm16, sampleRate);
+                            const audioUrl = URL.createObjectURL(wavBlob);
+                            playAudio(audioUrl);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    displayMessage(`Gemini TTS 오류: ${e.message}`, 'error');
+                }
+            }
             webSpeechSpeak(sentence);
         }
         
