@@ -553,15 +553,21 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             
             let match;
             let currentChunkIndex = 0;
-            // 청크 경계: 두 개 이상의 줄바꿈을 하나의 경계로 통일
-            const textWithBreaks = originalText.replace(/\n{2,}/g, '\n').replace(/\n/g, ' \n ');
+            // 청크 경계: 연속 줄바꿈들은 하나의 청크 경계로 취급하기 위해 그대로 유지
+            const textWithBreaks = originalText.replace(/\n/g, ' \n ');
+            let lastWasNewline = false;
 
             while ((match = regex.exec(textWithBreaks)) !== null) {
                 const element = match[0];
                 const isWord = /[a-zA-Z0-9]/.test(element) && element.length > 1;
 
                 if (element === '\n') {
-                    currentChunkIndex++;
+                    if (!lastWasNewline) {
+                        currentChunkIndex++;
+                    }
+                    lastWasNewline = true;
+                } else {
+                    lastWasNewline = false;
                 }
 
                 wordElements.push({
