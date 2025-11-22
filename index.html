@@ -413,6 +413,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         // --- Seeded Random Functions for Consistent Masking ---
         let prngSeed = 1;
         let ttsStatus = 'ready'; 
+        let userStopped = false;
+        let currentUtterance = null;
 
         /**
          * 텍스트를 기반으로 일관된 난수 시드를 생성하는 간단한 해시 함수
@@ -816,10 +818,12 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
             audioContext = new Audio();
             audioContext.src = audioUrl;
+            userStopped = false;
             
             audioContext.onplay = () => { ttsStatus = 'playing'; updateAudioButton(); };
             audioContext.onended = () => { ttsStatus = 'ready'; updateAudioButton(); URL.revokeObjectURL(audioUrl); };
             audioContext.onerror = (e) => { 
+                if (userStopped) { ttsStatus = 'ready'; updateAudioButton(); URL.revokeObjectURL(audioUrl); return; }
                 displayMessage(`Audio playback error: ${e.message || 'Unknown error'}`, "error"); 
                 ttsStatus = 'error'; 
                 updateAudioButton();
@@ -843,6 +847,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 audioContext.currentTime = 0;
                 audioContext = null;
             }
+            userStopped = true;
             try { if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } catch (_) {}
             if (ttsStatus === 'generating') {
                  displayMessage("TTS 생성 중단됨.", "info");
@@ -900,13 +905,15 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 }
                 utter.rate = 0.95;
                 utter.pitch = 1.0;
-                utter.onstart = () => { ttsStatus = 'playing'; updateAudioButton(); };
+                utter.onstart = () => { userStopped = false; ttsStatus = 'playing'; updateAudioButton(); };
                 utter.onend = () => { setTimeout(() => { idx++; speakNext(); }, 220); };
                 utter.onerror = (e) => {
+                    if (userStopped || (e && (e.error === 'interrupted' || e.error === 'canceled'))) { ttsStatus = 'ready'; updateAudioButton(); return; }
                     displayMessage(`Web Speech 오류: ${e.error || e.message || 'Unknown'}`, 'error');
                     ttsStatus = 'error';
                     updateAudioButton();
                 };
+                currentUtterance = utter;
                 window.speechSynthesis.speak(utter);
             };
 
@@ -938,6 +945,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
                 if (!audioContent) throw new Error('No audioContent');
                 const buf = base64ToArrayBuffer(audioContent);
                 const blob = new Blob([buf], { type: 'audio/mp3' });
+                 
                 const urlObj = URL.createObjectURL(blob);
                 playAudio(urlObj);
                 return true;
