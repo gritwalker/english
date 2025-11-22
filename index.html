@@ -427,15 +427,9 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
             stopSpeaking();
             
-            // --- 가독성 개선: 문장마다 줄바꿈 + 한 줄 빈줄 ---
-            // 문장 끝(.?!), 따옴표 포함 가능 → 두 줄바꿈 삽입
-            text = text.replace(/([.?!])(["”’']?)\s+(?=["“A-Z])/g, '$1$2\n\n');
-            // 마지막 문장도 두 줄바꿈으로 마무리
-            text = text.replace(/([.?!])\s*$/g, '$1\n\n');
-            // 과도한 연속 줄바꿈은 최대 두 개로 압축
-            text = text.replace(/\n{3,}/g, '\n\n');
-
-            originalText = text;
+            // --- 문장 단위로 정확히 분리 후 줄바꿈 구성 ---
+            const sentences = splitIntoSentences(text);
+            originalText = sentences.join('\n\n');
             currentLessonTitle = title;
             lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`;
             
@@ -981,3 +975,9 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
 </body>
 </html>
+        // 문장 분리 유틸리티: 개행을 공백으로 정규화 후 .?! 및 따옴표를 포함해 분리
+        function splitIntoSentences(str) {
+            const normalized = str.replace(/\s*\n\s*/g, ' ');
+            const matches = normalized.match(/[^.!?]+[.!?](?:["”’']+)?|[^.!?]+$/g) || [];
+            return matches.map(s => s.trim()).filter(Boolean);
+        }
