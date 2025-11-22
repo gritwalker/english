@@ -57,6 +57,10 @@
         .btn-green {
             @apply bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500 focus:ring-opacity-50;
         }
+        .btn-outline {
+            @apply px-3 py-1 font-semibold rounded-lg border border-gray-400 text-gray-700 bg-white hover:bg-gray-50 shadow-sm;
+        }
+        .nav-card { @apply bg-white rounded-xl shadow-lg border border-gray-200 p-3; }
         .btn-audio {
              @apply bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-500 focus:ring-opacity-50;
         }
@@ -93,30 +97,36 @@
 
     <div class="container-wrapper">
         <header class="top-nav">
-            <div class="max-w-3xl mx-auto flex items-center justify-between p-3">
-                <div class="text-sm font-semibold text-gray-700">영어 암기 도우미</div>
-                <div class="flex gap-2">
-                    <button onclick="processText(LESSON_7_SCRIPT, 'Lesson 7: Rada\'s New World')" class="btn btn-primary">7과</button>
-                    <button onclick="processText(LESSON_8_SCRIPT, 'Lesson 8: Uigwe and Jikji')" class="btn btn-primary">8과</button>
+            <div class="max-w-3xl mx-auto p-3">
+                <div class="flex items-center justify-between mb-3">
+                    <button onclick="showHomeTutorial()" class="btn-outline">홈</button>
+                    <div class="text-base font-semibold text-gray-700">영어 암기 도우미</div>
+                    <div class="w-16"></div>
+                </div>
+                <div class="nav-card mb-3 flex items-center justify-center gap-3">
+                    <button onclick="processText(LESSON_7_SCRIPT, '7과: Rada\'s New World')" class="btn btn-primary w-24">7과 본문</button>
+                    <button onclick="processText(LESSON_8_SCRIPT, '8과: Uigwe and Jikji')" class="btn btn-primary w-24">8과 본문</button>
+                </div>
+                <div class="nav-card flex items-center justify-center gap-2">
+                    <button onclick="setDifficulty(0)" class="btn-outline w-16 text-xs">0</button>
+                    <button onclick="setDifficulty(1)" class="btn-outline w-16 text-xs">20</button>
+                    <button onclick="setDifficulty(2)" class="btn-outline w-16 text-xs">40</button>
+                    <button onclick="setDifficulty(3)" class="btn-outline w-16 text-xs">60</button>
+                    <button onclick="setDifficulty(4)" class="btn-outline w-16 text-xs">80</button>
+                    <button onclick="setDifficulty(5)" class="btn-outline w-16 text-xs">100</button>
+                    <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn-outline w-20 text-xs">정답</button>
                 </div>
             </div>
         </header>
 
         <main id="app-container">
 
-            <!-- 1. 본문 선택 섹션 -->
-            <div id="input-section" class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
-                <h2 class="text-xl font-semibold mb-3 text-indigo-600">1단계: 외울 과 선택</h2>
-                <p class="text-gray-600 mb-4">학습할 과(Lesson)를 선택하세요. </p>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <button onclick="processText(LESSON_7_SCRIPT, 'Lesson 7: Rada\'s New World')" class="btn btn-primary w-full">
-                        Lesson 7 본문
-                    </button>
-                    <button onclick="processText(LESSON_8_SCRIPT, 'Lesson 8: Uigwe and Jikji')" class="btn btn-primary w-full">
-                        Lesson 8 본문
-                    </button>
-                </div>
-                <div id="tts-status-message-initial" class="status-message hidden mt-4"></div>
+            <!-- 본문 선택 섹션 제거됨 -->
+
+            <!-- 초기 메시지 -->
+            <div id="initial-message" class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200 text-center">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-600">영어 암기 도우미</h2>
+                <p class="text-gray-600 mb-4">상단에서 과목과 난이도를 선택해주세요.</p>
             </div>
 
             <!-- 2. 암기 모드 섹션 -->
@@ -126,12 +136,9 @@
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
                     <h2 id="lesson-title" class="text-xl font-semibold mb-3 text-indigo-600">2단계: 빈칸 채우며 외우기</h2>
                     
-                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                        <span id="current-difficulty-display" class="text-lg font-medium text-gray-700">난이도: 쉬움 (0% 가림)</span>
+                    <div class="flex items-center justify-between mb-4">
+                        <span id="current-difficulty-display" class="text-lg font-medium text-gray-700"></span>
                         <div class="flex gap-2">
-                            <button id="toggle-answer-btn" onclick="toggleAnswer()" class="btn btn-green">
-                                정답 보기/숨기기
-                            </button>
                             <button id="audio-btn" onclick="toggleAudio()" class="btn btn-audio">
                                 🔊 음성 듣기
                             </button>
@@ -140,7 +147,7 @@
 
                     <div id="tts-status-message" class="hidden status-message"></div>
 
-                    <p class="text-sm text-gray-500 mt-2 text-center">난이도는 하단 메뉴에서 변경하세요.</p>
+
                 </div>
 
                 <!-- 본문 표시 영역 -->
@@ -161,16 +168,6 @@
         </main>
 
         
-    </div>
-    <div id="difficulty-footer" class="footer-bar hidden">
-        <div class="max-w-3xl mx-auto px-3 py-2 flex items-center justify-center gap-2">
-            <button onclick="setDifficulty(0)" class="btn btn-secondary w-20">0%</button>
-            <button onclick="setDifficulty(1)" class="btn btn-secondary w-20">20%</button>
-            <button onclick="setDifficulty(2)" class="btn btn-secondary w-20">40%</button>
-            <button onclick="setDifficulty(3)" class="btn btn-secondary w-20">60%</button>
-            <button onclick="setDifficulty(4)" class="btn btn-secondary w-20">80%</button>
-            <button onclick="setDifficulty(5)" class="btn btn-secondary w-20">100%</button>
-        </div>
     </div>
 
     <script>
@@ -305,7 +302,9 @@ At a book exhibition in Paris in 1972, Jikji* was displayed as the oldest book i
 
 Dr. Park, thanks to your hard work, Jikji and Uigwe were found, and all Koreans thank you for that.
 
-Dr. Park: I hope people will become more interested in our national treasures abroad and work for their return.`;
+        Dr. Park: I hope people will become more interested in our national treasures abroad and work for their return.`;
+
+        const HOME_TUTORIAL = `영어 본문 외우는 법\n\n1) 본문을 천천히 한 번 읽습니다.\n2) 난이도를 0→20→40→60→80→100 순서로 올리며 빈칸을 채웁니다.\n3) 문장을 조각내어 페이지 단위로 외우고 이전/다음으로 반복합니다.\n4) 정답 버튼으로 가린 단어를 확인한 뒤 다시 가립니다.\n5) 음성 듣기로 발음과 리듬을 익힙니다.`;
 
 
         // ----------------------------------------------------------------------------------
@@ -542,15 +541,36 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             // 3. 난이도 초기화 및 마스킹 인덱스 업데이트
             setDifficulty(0); 
 
-            // 4. UI 상태 전환
+            // UI 상태 전환
             isAnswerVisible = false;
-            inputSection.classList.add('hidden');
+            document.getElementById('initial-message').classList.add('hidden');
             memorizationSection.classList.remove('hidden');
-            document.getElementById('difficulty-footer').classList.remove('hidden');
             
             updateToggleAnswerButton();
             renderPage();
             updateAudioButton(); 
+            updatePaginationControls();
+        }
+
+        function showHomeTutorial() {
+            stopSpeaking();
+            const textOrArray = HOME_TUTORIAL.trim();
+            sentences = textOrArray.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+            if (!sentences.length) { sentences = splitIntoSentences(textOrArray); }
+            originalText = sentences.join('\n\n');
+            currentLessonTitle = '영어 본문 외우는 법';
+            lessonTitleEl.textContent = `2단계: ${currentLessonTitle}`;
+            chunks = [...sentences];
+            totalPages = Math.ceil(chunks.length / chunksPerPage);
+            currentPage = 1;
+            prepareWords();
+            setDifficulty(0);
+            isAnswerVisible = false;
+            document.getElementById('initial-message').classList.add('hidden');
+            memorizationSection.classList.remove('hidden');
+            updateToggleAnswerButton();
+            renderPage();
+            updateAudioButton();
             updatePaginationControls();
         }
 
@@ -664,7 +684,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
          * 정답 보기 버튼 텍스트를 업데이트합니다.
          */
         function updateToggleAnswerButton() {
-            toggleAnswerBtn.textContent = isAnswerVisible ? '정답 숨기기' : '정답 보기';
+            if (toggleAnswerBtn) { toggleAnswerBtn.textContent = '정답'; }
         }
 
         // --- 페이지네이션 함수 ---
@@ -1082,7 +1102,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             audioBtn.disabled = isDisabled;
 
             // 상태 메시지 표시
-            const targetMessageEl = memorizationSection.classList.contains('hidden') ? ttsStatusMessageInitial : ttsStatusMessage;
+            const targetMessageEl = ttsStatusMessage;
             
             targetMessageEl.classList.remove('hidden', 'status-error', 'status-loading');
 
@@ -1118,8 +1138,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
 
             // UI 상태 전환
             memorizationSection.classList.add('hidden');
-            inputSection.classList.remove('hidden');
-            document.getElementById('difficulty-footer').classList.add('hidden');
+            document.getElementById('initial-message').classList.remove('hidden');
             
             updateAudioButton();
             displayMessage("새로운 과를 선택해 주세요.", "info");
@@ -1136,6 +1155,7 @@ Dr. Park: I hope people will become more interested in our national treasures ab
         // 초기 로드 시 실행
         window.onload = function() {
             updateAudioButton();
+            showHomeTutorial();
         };
 
     </script>
