@@ -521,8 +521,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             currentLessonTitle = title;
             lessonTitleEl.textContent = `2단계: ${currentLessonTitle} 외우기`;
             
-            // 1. 텍스트를 줄('\n') 단위로 분할하여 페이지 청크 준비
-            chunks = originalText.split('\n');
+            // 1. 사용자가 넣은 빈 줄(두 개 이상의 \n)을 기준으로 문장을 분리
+            chunks = originalText.split(/\n{2,}/).map(s => s.trim());
             totalPages = Math.ceil(chunks.length / chunksPerPage);
             currentPage = 1;
             
@@ -553,7 +553,8 @@ Dr. Park: I hope people will become more interested in our national treasures ab
             
             let match;
             let currentChunkIndex = 0;
-            const textWithBreaks = originalText.replace(/\n/g, ' \n ');
+            // 청크 경계: 두 개 이상의 줄바꿈을 하나의 경계로 통일
+            const textWithBreaks = originalText.replace(/\n{2,}/g, '\n').replace(/\n/g, ' \n ');
 
             while ((match = regex.exec(textWithBreaks)) !== null) {
                 const element = match[0];
