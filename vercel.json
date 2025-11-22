@@ -4,6 +4,8 @@
     { "src": "api/tts.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/tts", "dest": "/api/tts.js" }
+    { "src": "/api/tts", "dest": "/api/tts.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
